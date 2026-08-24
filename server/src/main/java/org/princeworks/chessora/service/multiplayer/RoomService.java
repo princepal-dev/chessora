@@ -31,7 +31,6 @@ public class RoomService implements IRoomService {
     return new CreateRoomResponse(roomCode, room.getCreatedAt());
   }
 
-  @Override
   public void joinRoom(Integer roomCode, User user, JoinRoomRequest roomRequest) {
     Room room =
         roomRepository

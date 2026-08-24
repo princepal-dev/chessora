@@ -6,5 +6,4 @@ import org.princeworks.chessora.response.multiplayer.CreateRoomResponse;
 
 public interface IRoomService {
     CreateRoomResponse createRoom();
-    void joinRoom(Integer roomCode, User user, JoinRoomRequest roomRequest);
 }

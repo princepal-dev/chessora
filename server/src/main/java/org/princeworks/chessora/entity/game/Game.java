@@ -22,8 +22,6 @@ public class Game {
     @Enumerated(EnumType.STRING)
     private GameStatus status;
     
-    
-    
     @CreationTimestamp
     private LocalDateTime createdAt;
     

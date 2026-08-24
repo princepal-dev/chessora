@@ -1,4 +1,4 @@
-package org.princeworks.chessora.controller;
+package org.princeworks.chessora.controller.rest;
 
 import lombok.RequiredArgsConstructor;
 import org.princeworks.chessora.common.ApiResponse;
@@ -19,14 +19,4 @@ public class RoomController {
     CreateRoomResponse data = roomService.createRoom();
     return ResponseEntity.ok(ApiResponse.success("room created successfully!", data));
   }
-
-  @PutMapping("/{roomCode}")
-  public ResponseEntity<ApiResponse<Void>> joinRoom(
-      @PathVariable Integer roomCode, @RequestBody JoinRoomRequest roomRequest) {
-    // TODO : We have to add user here
-    roomService.joinRoom(roomCode, null, roomRequest);
-    return ResponseEntity.ok(ApiResponse.success("room joined successfully!"));
-  }
-  
-  
 }
