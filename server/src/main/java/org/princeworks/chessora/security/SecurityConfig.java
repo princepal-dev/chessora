@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -42,6 +43,9 @@ public class SecurityConfig {
     // Adding csrf
     http.csrf(AbstractHttpConfigurer::disable);
 
+    // Disable frame options security for h2 DB
+    http.headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin));
+
     // Make session stateless
     http.sessionManagement(
         session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
@@ -49,7 +53,7 @@ public class SecurityConfig {
     // Securing end points
     http.authorizeHttpRequests(
         req -> {
-          req.requestMatchers("/api/v1/auth/**", "/errors").permitAll();
+          req.requestMatchers("/h2-console/**","/api/v1/auth/**", "/errors").permitAll();
           req.anyRequest().authenticated();
         });
 

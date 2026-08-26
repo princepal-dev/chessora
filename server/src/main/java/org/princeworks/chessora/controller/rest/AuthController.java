@@ -3,14 +3,18 @@ package org.princeworks.chessora.controller.rest;
 import lombok.RequiredArgsConstructor;
 import org.princeworks.chessora.common.ApiResponse;
 import org.princeworks.chessora.entity.user.SignInMethod;
+import org.princeworks.chessora.entity.user.TokenType;
 import org.princeworks.chessora.entity.user.User;
+import org.princeworks.chessora.entity.user.VerificationToken;
+import org.princeworks.chessora.repositories.TokenRepository;
 import org.princeworks.chessora.repositories.UserRepository;
 import org.princeworks.chessora.request.user.SignInRequest;
 import org.princeworks.chessora.request.user.SignUpRequest;
 import org.princeworks.chessora.response.user.SignInResponse;
 import org.princeworks.chessora.security.jwt.JwtUtils;
 import org.princeworks.chessora.security.service.UserDetailsImpl;
-import org.princeworks.chessora.service.user.IUserService;
+import org.princeworks.chessora.service.email.EmailService;
+import org.princeworks.chessora.utils.TokenUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,19 +23,21 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/auth")
 public class AuthController {
   private final JwtUtils jwtUtils;
-  private final IUserService userService;
+  private final TokenUtil tokenUtil;
+  private final EmailService emailService;
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
+  private final TokenRepository tokenRepository;
   private final AuthenticationManager authenticationManager;
 
   @PostMapping("/signin")
@@ -68,10 +74,15 @@ public class AuthController {
     if (userRepository.existsByEmail(signUpRequest.getEmail())
         || userRepository.existsByUserName(signUpRequest.getUsername()))
       return ResponseEntity.badRequest()
-          .body(ApiResponse.error("Error : either email or username is already registered"));
+          .body(ApiResponse.error("Email or username is already registered"));
 
     String hashedPassword = passwordEncoder.encode(signUpRequest.getPassword());
-    String fullName = signUpRequest.getFirstName() + signUpRequest.getLastName();
+    String fullName = signUpRequest.getFirstName();
+
+    if (signUpRequest.getLastName() != null && !signUpRequest.getLastName().isBlank()) {
+      fullName += " " + signUpRequest.getLastName();
+    }
+
     User user =
         new User(
             signUpRequest.getEmail(),
@@ -81,7 +92,45 @@ public class AuthController {
             SignInMethod.EMAIL);
     userRepository.save(user);
 
+    VerificationToken token = new VerificationToken();
+    token.setToken(tokenUtil.generateVerificationToken());
+    token.setType(TokenType.EMAIL_VERIFICATION);
+    token.setUser(user);
+    token.setExpiry(Instant.now().plus(1, ChronoUnit.HOURS));
+
+    emailService.sendWelcomeEmail(signUpRequest.getEmail(), fullName, token.getToken());
+    
+    tokenRepository.save(token);
+
     return new ResponseEntity<>(
         ApiResponse.success("User registered successfully!"), HttpStatus.CREATED);
+  }
+
+  @GetMapping("/verify-email/{token}")
+  public ResponseEntity<ApiResponse<Void>> verifyEmail(@PathVariable String token) {
+    if (token == null || token.isBlank())
+      return ResponseEntity.badRequest()
+          .body(ApiResponse.error("Email verification token is null or empty!"));
+
+    VerificationToken savedToken =
+        tokenRepository
+            .findByToken(token)
+            .orElseThrow(() -> new RuntimeException("Unable to find the verification token"));
+
+    if (savedToken.isUsed())
+      return ResponseEntity.badRequest()
+          .body(ApiResponse.error("Verification token is already used"));
+
+    if (savedToken.getExpiry().isBefore(Instant.now()))
+      return ResponseEntity.badRequest().body(ApiResponse.error("Verification token is expired"));
+
+    User user = savedToken.getUser();
+    user.setEmailVerified(true);
+    savedToken.setUsed(true);
+
+    userRepository.save(user);
+    tokenRepository.save(savedToken);
+
+    return ResponseEntity.ok().body(ApiResponse.success("Email verified successfully"));
   }
 }

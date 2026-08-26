@@ -9,7 +9,9 @@ spring:
     secret: keymySuperSecurekey1298371298739821739871298739812739879key
     expirationMs: 172800000
     
-
+  email:
+    verification-url: http://localhost:8080/api/v1/auth/verify-email
+  
   datasource:
     url: jdbc:h2:mem:chessora
     username: sa
@@ -19,6 +21,19 @@ spring:
     console:
       enabled: true
       
+  mail:
+    host: localhost
+    port: 1025
+    username:
+    password:
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+      
   jpa:
     hibernate:
       ddl-auto: create-drop
+    open-in-view: false

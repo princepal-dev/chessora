@@ -7,7 +7,7 @@ import org.springframework.stereotype.Controller;
 import java.security.Principal;
 
 @Controller
-public class RoomController {
+public class RoomWsController {
     @MessageMapping("/room/join")
     public void joinRoom(JoinRoomRequest request, Principal principal) {
         

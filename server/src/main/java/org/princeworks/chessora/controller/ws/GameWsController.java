@@ -5,10 +5,10 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
 @Controller
-public class GameController {
+public class GameWsController {
     private final SimpMessagingTemplate messagingTemplate;
 
-    public GameController(SimpMessagingTemplate messagingTemplate) {
+    public GameWsController(SimpMessagingTemplate messagingTemplate) {
         this.messagingTemplate = messagingTemplate;
     }
     
