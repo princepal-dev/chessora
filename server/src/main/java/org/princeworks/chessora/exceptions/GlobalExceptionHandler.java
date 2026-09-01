@@ -1,8 +1,8 @@
 package org.princeworks.chessora.exceptions;
 
-import org.princeworks.chessora.common.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.princeworks.chessora.common.ApiResponse;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 

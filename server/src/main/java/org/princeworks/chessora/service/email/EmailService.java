@@ -12,6 +12,9 @@ import org.springframework.stereotype.Service;
 public class EmailService {
   @Value("${spring.email.verification-url}")
   private String verificationUrl;
+  
+  @Value("${spring.email.password-reset-url}")
+  private String passwordResetUrl;
 
   private final JavaMailSender javaMailSender;
 
@@ -44,4 +47,28 @@ public class EmailService {
 
       javaMailSender.send(message);
   }
+
+    public void sendPasswordResetToken(String email, String fullName, String token) {
+        String passwordResetLink = passwordResetUrl + token;
+
+        SimpleMailMessage message = new SimpleMailMessage();
+
+        message.setTo(email);
+        message.setSubject("Your Chessora password reset link is ready!");
+
+        message.setText(
+                """
+                  Hi %s,
+      
+                  Just click the link to reset it - but be quick, it expires in 1 hour!
+            
+                  %s
+      
+                  Thanks,
+                  Chessora Team
+                  """
+                        .formatted(fullName, passwordResetLink));
+
+        javaMailSender.send(message);
+    }
 }

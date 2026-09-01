@@ -1,5 +1,6 @@
 package org.princeworks.chessora.controller.rest;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.princeworks.chessora.common.ApiResponse;
 import org.princeworks.chessora.entity.user.SignInMethod;
@@ -8,6 +9,8 @@ import org.princeworks.chessora.entity.user.User;
 import org.princeworks.chessora.entity.user.VerificationToken;
 import org.princeworks.chessora.repositories.TokenRepository;
 import org.princeworks.chessora.repositories.UserRepository;
+import org.princeworks.chessora.request.user.ForgotPasswordRequest;
+import org.princeworks.chessora.request.user.PasswordResetRequest;
 import org.princeworks.chessora.request.user.SignInRequest;
 import org.princeworks.chessora.request.user.SignUpRequest;
 import org.princeworks.chessora.response.user.SignInResponse;
@@ -96,16 +99,17 @@ public class AuthController {
     token.setToken(tokenUtil.generateVerificationToken());
     token.setType(TokenType.EMAIL_VERIFICATION);
     token.setUser(user);
-    token.setExpiry(Instant.now().plus(1, ChronoUnit.HOURS));
+    token.setExpiry(Instant.now().plus(1, ChronoUnit.DAYS));
 
     emailService.sendWelcomeEmail(signUpRequest.getEmail(), fullName, token.getToken());
-    
+
     tokenRepository.save(token);
 
     return new ResponseEntity<>(
         ApiResponse.success("User registered successfully!"), HttpStatus.CREATED);
   }
 
+  @Transactional
   @GetMapping("/verify-email/{token}")
   public ResponseEntity<ApiResponse<Void>> verifyEmail(@PathVariable String token) {
     if (token == null || token.isBlank())
@@ -116,6 +120,10 @@ public class AuthController {
         tokenRepository
             .findByToken(token)
             .orElseThrow(() -> new RuntimeException("Unable to find the verification token"));
+
+    if (savedToken.getType() != TokenType.EMAIL_VERIFICATION)
+      return ResponseEntity.badRequest()
+          .body(ApiResponse.error("Verification token type mismatch"));
 
     if (savedToken.isUsed())
       return ResponseEntity.badRequest()
@@ -132,5 +140,73 @@ public class AuthController {
     tokenRepository.save(savedToken);
 
     return ResponseEntity.ok().body(ApiResponse.success("Email verified successfully"));
+  }
+
+  @PostMapping("/forgot-password")
+  public ResponseEntity<ApiResponse<Void>> forgotPassword(
+      @RequestBody ForgotPasswordRequest passwordResetRequest) {
+    if (!userRepository.existsByEmail(passwordResetRequest.getEmail()))
+      return ResponseEntity.badRequest()
+          .body(ApiResponse.error("Email not registered with chessora!"));
+
+    User user =
+        userRepository
+            .findByEmail(passwordResetRequest.getEmail())
+            .orElseThrow(
+                () ->
+                    new RuntimeException(
+                        "Unable to find the user with email : " + passwordResetRequest.getEmail()));
+    
+    if (!user.getEmailVerified())
+      return ResponseEntity.badRequest()
+              .body(ApiResponse.error("Please verify your email to reset your password!"));
+
+    VerificationToken token = new VerificationToken();
+    token.setUser(user);
+    token.setToken(tokenUtil.generateVerificationToken());
+    token.setType(TokenType.PASSWORD_RESET);
+    token.setExpiry(Instant.now().plus(1, ChronoUnit.HOURS));
+
+    emailService.sendPasswordResetToken(user.getEmail(), user.getFullName(), token.getToken());
+
+    tokenRepository.save(token);
+
+    return ResponseEntity.ok().body(ApiResponse.success("Password reset token sent successfully!"));
+  }
+
+  @Transactional
+  @PostMapping("/password-reset/{token}")
+  public ResponseEntity<ApiResponse<Void>> forgotPassword(
+      @PathVariable String token, @RequestBody PasswordResetRequest passwordResetRequest) {
+    if (token == null || token.isBlank())
+      return ResponseEntity.badRequest()
+          .body(ApiResponse.error("Password reset token is null or empty!"));
+
+    VerificationToken savedToken =
+        tokenRepository
+            .findByToken(token)
+            .orElseThrow(() -> new RuntimeException("Unable to find the verification token"));
+
+    if (savedToken.getType() != TokenType.PASSWORD_RESET)
+      return ResponseEntity.badRequest()
+          .body(ApiResponse.error("Verification token type mismatch"));
+
+    if (savedToken.isUsed())
+      return ResponseEntity.badRequest()
+          .body(ApiResponse.error("Verification token is already used"));
+
+    if (savedToken.getExpiry().isBefore(Instant.now()))
+      return ResponseEntity.badRequest().body(ApiResponse.error("Verification token is expired"));
+
+    User user = savedToken.getUser();
+    String hashedPassword = passwordEncoder.encode(passwordResetRequest.getPassword());
+    user.setPassword(hashedPassword);
+
+    savedToken.setUsed(true);
+
+    userRepository.save(user);
+    tokenRepository.save(savedToken);
+
+    return new ResponseEntity<>(ApiResponse.success("Password reset successfully!"), HttpStatus.OK);
   }
 }
