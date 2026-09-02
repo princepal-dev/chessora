@@ -1,6 +1,8 @@
 package org.princeworks.chessora.controller.rest;
 
 import jakarta.transaction.Transactional;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import lombok.RequiredArgsConstructor;
 import org.princeworks.chessora.common.ApiResponse;
 import org.princeworks.chessora.entity.user.SignInMethod;
@@ -18,7 +20,9 @@ import org.princeworks.chessora.security.jwt.JwtUtils;
 import org.princeworks.chessora.security.service.UserDetailsImpl;
 import org.princeworks.chessora.service.email.EmailService;
 import org.princeworks.chessora.utils.TokenUtil;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,9 +31,6 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 
 @RestController
 @RequiredArgsConstructor
@@ -54,22 +55,27 @@ public class AuthController {
               new UsernamePasswordAuthenticationToken(
                   signInRequest.getUsername(), signInRequest.getPassword()));
     } catch (AuthenticationException e) {
-      return ResponseEntity.badRequest().body(ApiResponse.error("Bad Credentials"));
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+          .body(ApiResponse.error("Bad Credentials"));
     }
-
-    SecurityContextHolder.getContext().setAuthentication(authentication);
 
     UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
     if (userDetails == null)
       return ResponseEntity.badRequest().body(ApiResponse.error("Error : in signing in!"));
 
-    String jwtToken = jwtUtils.generateTokenFromUserName(userDetails);
+    if (!userDetails.getEmailVerified())
+      return ResponseEntity.status(HttpStatus.FORBIDDEN)
+          .body(ApiResponse.error("Verify your email before signing in!"));
 
-    return new ResponseEntity<>(
-        ApiResponse.success(
-            "Sign in success", new SignInResponse(jwtToken, userDetails.getUsername())),
-        HttpStatus.OK);
+    SecurityContextHolder.getContext().setAuthentication(authentication);
+
+    ResponseCookie cookie = jwtUtils.generateJwtCookie(userDetails);
+
+    return ResponseEntity.ok()
+        .header(HttpHeaders.SET_COOKIE, cookie.toString())
+        .body(
+            ApiResponse.success("Sign in success", new SignInResponse(userDetails.getUsername(), userDetails.getEmail())));
   }
 
   @PostMapping("/signup")
@@ -156,10 +162,10 @@ public class AuthController {
                 () ->
                     new RuntimeException(
                         "Unable to find the user with email : " + passwordResetRequest.getEmail()));
-    
+
     if (!user.getEmailVerified())
       return ResponseEntity.badRequest()
-              .body(ApiResponse.error("Please verify your email to reset your password!"));
+          .body(ApiResponse.error("Please verify your email to reset your password!"));
 
     VerificationToken token = new VerificationToken();
     token.setUser(user);
@@ -208,5 +214,13 @@ public class AuthController {
     tokenRepository.save(savedToken);
 
     return new ResponseEntity<>(ApiResponse.success("Password reset successfully!"), HttpStatus.OK);
+  }
+
+  @PostMapping("/logout")
+  public ResponseEntity<ApiResponse<Void>> logout() {
+    ResponseCookie cookie = jwtUtils.getCleanJwtCookie();
+    return ResponseEntity.ok()
+        .header(HttpHeaders.SET_COOKIE, cookie.toString())
+        .body(ApiResponse.success("Log out success!"));
   }
 }

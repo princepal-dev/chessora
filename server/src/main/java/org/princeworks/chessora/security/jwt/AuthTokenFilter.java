@@ -30,7 +30,7 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     log.debug("Authentication called for URI : {}", request.getRequestURI());
 
     try {
-      String jwt = jwtUtils.getJwtFromHeader(request);
+      String jwt = jwtUtils.getJwtFromCookies(request);
 
       if (jwt != null && jwtUtils.validateJwt(jwt)) {
         String userName = jwtUtils.getUserNameFromJwt(jwt);

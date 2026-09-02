@@ -19,19 +19,21 @@ public class UserDetailsImpl implements UserDetails {
   private Long id;
   private String email;
   private String userName;
+  private Boolean emailVerified;
 
   @JsonIgnore private String password;
 
-  public UserDetailsImpl(Long id, String email, String userName, String password) {
+  public UserDetailsImpl(Long id, String email, String userName, String password, Boolean emailVerified) {
     this.id = id;
     this.email = email;
     this.userName = userName;
     this.password = password;
+    this.emailVerified = emailVerified;
   }
 
   public static UserDetailsImpl build(User user) {
     return new UserDetailsImpl(
-        user.getId(), user.getEmail(), user.getUserName(), user.getPassword());
+        user.getId(), user.getEmail(), user.getUserName(), user.getPassword(), user.getEmailVerified());
   }
 
   @Override
