@@ -4,7 +4,8 @@ import jakarta.transaction.Transactional;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import lombok.RequiredArgsConstructor;
-import org.princeworks.chessora.common.ApiResponse;
+import org.princeworks.chessora.common.CommonResponse;
+import org.princeworks.chessora.controller.docs.AuthApi;
 import org.princeworks.chessora.entity.user.SignInMethod;
 import org.princeworks.chessora.entity.user.TokenType;
 import org.princeworks.chessora.entity.user.User;
@@ -35,7 +36,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/auth")
-public class AuthController {
+public class AuthController implements AuthApi {
   private final JwtUtils jwtUtils;
   private final TokenUtil tokenUtil;
   private final EmailService emailService;
@@ -43,9 +44,10 @@ public class AuthController {
   private final PasswordEncoder passwordEncoder;
   private final TokenRepository tokenRepository;
   private final AuthenticationManager authenticationManager;
-
+  
+  @Override
   @PostMapping("/signin")
-  public ResponseEntity<ApiResponse<SignInResponse>> authenticateUser(
+  public ResponseEntity<CommonResponse<SignInResponse>> authenticateUser(
       @RequestBody SignInRequest signInRequest) {
     Authentication authentication;
 
@@ -56,17 +58,17 @@ public class AuthController {
                   signInRequest.getUsername(), signInRequest.getPassword()));
     } catch (AuthenticationException e) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-          .body(ApiResponse.error("Bad Credentials"));
+          .body(CommonResponse.error("Bad Credentials"));
     }
 
     UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
     if (userDetails == null)
-      return ResponseEntity.badRequest().body(ApiResponse.error("Error : in signing in!"));
+      return ResponseEntity.badRequest().body(CommonResponse.error("Error : in signing in!"));
 
     if (!userDetails.getEmailVerified())
       return ResponseEntity.status(HttpStatus.FORBIDDEN)
-          .body(ApiResponse.error("Verify your email before signing in!"));
+          .body(CommonResponse.error("Verify your email before signing in!"));
 
     SecurityContextHolder.getContext().setAuthentication(authentication);
 
@@ -75,17 +77,19 @@ public class AuthController {
     return ResponseEntity.ok()
         .header(HttpHeaders.SET_COOKIE, cookie.toString())
         .body(
-            ApiResponse.success(
+            CommonResponse.success(
                 "Sign in success",
                 new SignInResponse(userDetails.getUsername(), userDetails.getEmail())));
   }
 
+  @Override
   @PostMapping("/signup")
-  public ResponseEntity<ApiResponse<Void>> registerUser(@RequestBody SignUpRequest signUpRequest) {
+  public ResponseEntity<CommonResponse<Void>> registerUser(
+          @RequestBody SignUpRequest signUpRequest) {
     if (userRepository.existsByEmail(signUpRequest.getEmail())
         || userRepository.existsByUserName(signUpRequest.getUsername()))
       return ResponseEntity.badRequest()
-          .body(ApiResponse.error("Email or username is already registered"));
+          .body(CommonResponse.error("Email or username is already registered"));
 
     String hashedPassword = passwordEncoder.encode(signUpRequest.getPassword());
     String fullName = signUpRequest.getFirstName();
@@ -114,15 +118,16 @@ public class AuthController {
     tokenRepository.save(token);
 
     return new ResponseEntity<>(
-        ApiResponse.success("User registered successfully!"), HttpStatus.CREATED);
+        CommonResponse.success("User registered successfully!"), HttpStatus.CREATED);
   }
 
+  @Override
   @Transactional
   @GetMapping("/verify-email/{token}")
-  public ResponseEntity<ApiResponse<Void>> verifyEmail(@PathVariable String token) {
+  public ResponseEntity<CommonResponse<Void>> verifyEmail(@PathVariable String token) {
     if (token == null || token.isBlank())
       return ResponseEntity.badRequest()
-          .body(ApiResponse.error("Email verification token is null or empty!"));
+          .body(CommonResponse.error("Email verification token is null or empty!"));
 
     VerificationToken savedToken =
         tokenRepository
@@ -131,14 +136,15 @@ public class AuthController {
 
     if (savedToken.getType() != TokenType.EMAIL_VERIFICATION)
       return ResponseEntity.badRequest()
-          .body(ApiResponse.error("Verification token type mismatch"));
+          .body(CommonResponse.error("Verification token type mismatch"));
 
     if (savedToken.isUsed())
       return ResponseEntity.badRequest()
-          .body(ApiResponse.error("Verification token is already used"));
+          .body(CommonResponse.error("Verification token is already used"));
 
     if (savedToken.getExpiry().isBefore(Instant.now()))
-      return ResponseEntity.badRequest().body(ApiResponse.error("Verification token is expired"));
+      return ResponseEntity.badRequest()
+          .body(CommonResponse.error("Verification token is expired"));
 
     User user = savedToken.getUser();
     user.setEmailVerified(true);
@@ -147,15 +153,16 @@ public class AuthController {
     userRepository.save(user);
     tokenRepository.save(savedToken);
 
-    return ResponseEntity.ok().body(ApiResponse.success("Email verified successfully"));
+    return ResponseEntity.ok().body(CommonResponse.success("Email verified successfully"));
   }
 
+  @Override
   @PostMapping("/forgot-password")
-  public ResponseEntity<ApiResponse<Void>> forgotPassword(
-      @RequestBody ForgotPasswordRequest passwordResetRequest) {
+  public ResponseEntity<CommonResponse<Void>> forgotPassword(
+          @RequestBody ForgotPasswordRequest passwordResetRequest) {
     if (!userRepository.existsByEmail(passwordResetRequest.getEmail()))
       return ResponseEntity.badRequest()
-          .body(ApiResponse.error("Email not registered with chessora!"));
+          .body(CommonResponse.error("Email not registered with chessora!"));
 
     User user =
         userRepository
@@ -167,7 +174,7 @@ public class AuthController {
 
     if (!user.getEmailVerified())
       return ResponseEntity.badRequest()
-          .body(ApiResponse.error("Please verify your email to reset your password!"));
+          .body(CommonResponse.error("Please verify your email to reset your password!"));
 
     VerificationToken token = new VerificationToken();
     token.setUser(user);
@@ -179,16 +186,18 @@ public class AuthController {
 
     tokenRepository.save(token);
 
-    return ResponseEntity.ok().body(ApiResponse.success("Password reset token sent successfully!"));
+    return ResponseEntity.ok()
+        .body(CommonResponse.success("Password reset token sent successfully!"));
   }
 
+  @Override
   @Transactional
   @PostMapping("/password-reset/{token}")
-  public ResponseEntity<ApiResponse<Void>> forgotPassword(
-      @PathVariable String token, @RequestBody PasswordResetRequest passwordResetRequest) {
+  public ResponseEntity<CommonResponse<Void>> resetPassword(
+          @PathVariable String token, @RequestBody PasswordResetRequest passwordResetRequest) {
     if (token == null || token.isBlank())
       return ResponseEntity.badRequest()
-          .body(ApiResponse.error("Password reset token is null or empty!"));
+          .body(CommonResponse.error("Password reset token is null or empty!"));
 
     VerificationToken savedToken =
         tokenRepository
@@ -197,14 +206,15 @@ public class AuthController {
 
     if (savedToken.getType() != TokenType.PASSWORD_RESET)
       return ResponseEntity.badRequest()
-          .body(ApiResponse.error("Verification token type mismatch"));
+          .body(CommonResponse.error("Verification token type mismatch"));
 
     if (savedToken.isUsed())
       return ResponseEntity.badRequest()
-          .body(ApiResponse.error("Verification token is already used"));
+          .body(CommonResponse.error("Verification token is already used"));
 
     if (savedToken.getExpiry().isBefore(Instant.now()))
-      return ResponseEntity.badRequest().body(ApiResponse.error("Verification token is expired"));
+      return ResponseEntity.badRequest()
+          .body(CommonResponse.error("Verification token is expired"));
 
     User user = savedToken.getUser();
     String hashedPassword = passwordEncoder.encode(passwordResetRequest.getPassword());
@@ -215,14 +225,16 @@ public class AuthController {
     userRepository.save(user);
     tokenRepository.save(savedToken);
 
-    return new ResponseEntity<>(ApiResponse.success("Password reset successfully!"), HttpStatus.OK);
+    return new ResponseEntity<>(
+        CommonResponse.success("Password reset successfully!"), HttpStatus.OK);
   }
 
+  @Override
   @PostMapping("/logout")
-  public ResponseEntity<ApiResponse<Void>> logout() {
+  public ResponseEntity<CommonResponse<Void>> logout() {
     ResponseCookie cookie = jwtUtils.getCleanJwtCookie();
     return ResponseEntity.ok()
         .header(HttpHeaders.SET_COOKIE, cookie.toString())
-        .body(ApiResponse.success("Log out success!"));
+        .body(CommonResponse.success("Log out success!"));
   }
 }

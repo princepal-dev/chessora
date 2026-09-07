@@ -4,7 +4,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.princeworks.chessora.common.ApiResponse;
+import org.princeworks.chessora.common.CommonResponse;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -34,6 +34,6 @@ public class AuthEntryPointJwt implements AuthenticationEntryPoint {
     data.put("path", request.getServletPath());
     
     final ObjectMapper mapper = new ObjectMapper();
-    mapper.writeValue(response.getOutputStream(), ApiResponse.error(authException.getMessage(), data));
+    mapper.writeValue(response.getOutputStream(), CommonResponse.error(authException.getMessage(), data));
   }
 }
