@@ -53,7 +53,8 @@ public class SecurityConfig {
     // Securing end points
     http.authorizeHttpRequests(
         req -> {
-          req.requestMatchers("/h2-console/**","/api/v1/auth/**", "/errors").permitAll();
+          req.requestMatchers("/swagger-ui/**", "/h2-console/**", "/api/v1/auth/**", "/errors")
+              .permitAll();
           req.anyRequest().authenticated();
         });
 

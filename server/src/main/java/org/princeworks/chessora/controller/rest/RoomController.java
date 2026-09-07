@@ -2,21 +2,54 @@ package org.princeworks.chessora.controller.rest;
 
 import lombok.RequiredArgsConstructor;
 import org.princeworks.chessora.common.ApiResponse;
-import org.princeworks.chessora.request.multiplayer.JoinRoomRequest;
+import org.princeworks.chessora.common.AppConstants;
+import org.princeworks.chessora.entity.user.User;
 import org.princeworks.chessora.response.multiplayer.CreateRoomResponse;
+import org.princeworks.chessora.response.multiplayer.GetRoomResponse;
 import org.princeworks.chessora.service.multiplayer.IRoomService;
+import org.princeworks.chessora.utils.AuthUtil;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/room")
 public class RoomController {
+  private final AuthUtil authUtil;
   private final IRoomService roomService;
 
-  @GetMapping
+  @PostMapping
   public ResponseEntity<ApiResponse<CreateRoomResponse>> createRoom() {
-    CreateRoomResponse data = roomService.createRoom();
+    User user = authUtil.loggedInUser();
+    CreateRoomResponse data = roomService.createRoom(user);
     return ResponseEntity.ok(ApiResponse.success("room created successfully!", data));
+  }
+
+  @GetMapping("/me")
+  public ResponseEntity<ApiResponse<List<GetRoomResponse>>> getAllRoomsCreatedByMe(
+      @RequestParam(name = "pageSize", defaultValue = AppConstants.PAGE_SIZE, required = false)
+          Integer pageSize,
+      @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER, required = false)
+          Integer pageNumber,
+      @RequestParam(name = "sortOrder", defaultValue = AppConstants.SORT_DIR, required = false)
+          String sortOrder) {
+    User loggedInUser = authUtil.loggedInUser();
+    List<GetRoomResponse> data = roomService.getAllRoomCreatedByMe(loggedInUser, pageNumber, pageSize, sortOrder);
+    return ResponseEntity.ok().body(ApiResponse.success("room fetched successfully!", data));
+  }
+  
+  @GetMapping
+  public ResponseEntity<ApiResponse<List<GetRoomResponse>>> getAllRooms(
+          @RequestParam(name = "pageSize", defaultValue = AppConstants.PAGE_SIZE, required = false)
+          Integer pageSize,
+          @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER, required = false)
+          Integer pageNumber,
+          @RequestParam(name = "sortOrder", defaultValue = AppConstants.SORT_DIR, required = false)
+          String sortOrder
+  ) {
+    List<GetRoomResponse> data = roomService.getAllRooms(pageNumber, pageSize, sortOrder);
+    return ResponseEntity.ok().body(ApiResponse.success("room fetch successfully!", data));
   }
 }

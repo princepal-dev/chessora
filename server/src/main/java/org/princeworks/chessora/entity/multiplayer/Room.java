@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.princeworks.chessora.entity.game.Game;
+import org.princeworks.chessora.entity.user.User;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -30,6 +31,10 @@ public class Room {
   @OneToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "game_id")
   private Game game;
+  
+  @ManyToOne (fetch = FetchType.LAZY)
+  @JoinColumn (name = "user_id", nullable = false)
+  private User roomCreator;
 
   @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval = true)
   List<RoomParticipant> participants = new ArrayList<>();

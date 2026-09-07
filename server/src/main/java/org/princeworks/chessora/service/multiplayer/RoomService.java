@@ -1,16 +1,19 @@
 package org.princeworks.chessora.service.multiplayer;
 
+import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.princeworks.chessora.entity.game.PlayerColor;
-import org.princeworks.chessora.entity.multiplayer.Role;
+import org.jspecify.annotations.NonNull;
 import org.princeworks.chessora.entity.multiplayer.Room;
-import org.princeworks.chessora.entity.multiplayer.RoomParticipant;
 import org.princeworks.chessora.entity.multiplayer.RoomStatus;
 import org.princeworks.chessora.entity.user.User;
 import org.princeworks.chessora.repositories.RoomRepository;
-import org.princeworks.chessora.request.multiplayer.JoinRoomRequest;
 import org.princeworks.chessora.response.multiplayer.CreateRoomResponse;
+import org.princeworks.chessora.response.multiplayer.GetRoomResponse;
 import org.princeworks.chessora.utils.RoomUtil;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -20,84 +23,66 @@ public class RoomService implements IRoomService {
   private final RoomRepository roomRepository;
 
   @Override
-  public CreateRoomResponse createRoom() {
+  public CreateRoomResponse createRoom(User user) {
     int roomCode = roomUtil.generateRoomCode();
     Room room = new Room();
     room.setStatus(RoomStatus.PENDING);
     room.setRoomCode(roomCode);
+    room.setRoomCreator(user);
 
     roomRepository.save(room);
 
     return new CreateRoomResponse(roomCode, room.getCreatedAt());
   }
 
-  public void joinRoom(Integer roomCode, User user, JoinRoomRequest roomRequest) {
-    Room room =
-        roomRepository
-            .findByRoomCode(roomCode)
-            .orElseThrow(
-                () -> new RuntimeException("Unable to find the room with room code : " + roomCode));
+  @Override
+  public List<GetRoomResponse> getAllRoomCreatedByMe(
+      User loggedInUser, Integer pageNumber, Integer pageSize, String sortOrder) {
+    Sort sortByAndOrder =
+        sortOrder.equalsIgnoreCase("asc")
+            ? Sort.by(sortOrder).ascending()
+            : Sort.by(sortOrder).descending();
 
-    if (roomRequest.getIsGuest() && user != null) {
-      throw new RuntimeException("You cannot join as a guest and a user at the same time");
-    }
+    Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sortByAndOrder);
+    Page<Room> roomPage = roomRepository.findByRoomCreator(pageDetails, loggedInUser);
 
-    if (!roomRequest.getIsGuest() && user == null) {
-      throw new RuntimeException("You have to join as a guest or a verified user");
-    }
+    List<Room> roomsCreatedByUser = roomPage.getContent();
 
-    if (roomRequest.getRole() == Role.PLAYER && roomRequest.getPlayerColor() == PlayerColor.NONE) {
-      throw new RuntimeException("Player color cannot be null, it should be either black or white!");
-    }
+    if (roomsCreatedByUser.isEmpty()) throw new RuntimeException("No rooms created by you");
 
-    if (roomRequest.getRole() == Role.PLAYER && room.getParticipants().stream()
-            .filter(participant -> participant.getRole() == Role.PLAYER)
-            .count()
-        >= 2) {
-      throw new RuntimeException("We already have two players in the room");
-    }
+    return getGetRoomResponses(roomsCreatedByUser);
+  }
 
-    String guestId = null;
+  @Override
+  public List<GetRoomResponse> getAllRooms(Integer pageNumber, Integer pageSize, String sortOrder) {
+    Sort sortByAndOrder =
+        sortOrder.equalsIgnoreCase("asc")
+            ? Sort.by(sortOrder).ascending()
+            : Sort.by(sortOrder).descending();
 
-    boolean whitePlayer =
-        room.getParticipants().stream()
-            .anyMatch(p -> p.getRole() == Role.PLAYER && p.getColor() == PlayerColor.WHITE);
+    Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sortByAndOrder);
+    Page<Room> allRoomsPage = roomRepository.findAll(pageDetails);
 
-    boolean blackPlayer =
-        room.getParticipants().stream()
-            .anyMatch(p -> p.getRole() == Role.PLAYER && p.getColor() == PlayerColor.BLACK);
+    List<Room> allRooms = allRoomsPage.getContent();
 
-    if (roomRequest.getIsGuest() && user == null) {
-      guestId = roomUtil.generateGuestId();
-    }
+    if (allRooms.isEmpty()) throw new RuntimeException("No active rooms available");
 
-    if (roomRequest.getRole() == Role.PLAYER
-        && roomRequest.getPlayerColor() == PlayerColor.BLACK
-        && blackPlayer) {
-      throw new RuntimeException("Black player already exists in the room!");
-    }
+    return getGetRoomResponses(allRooms);
+  }
 
-    if (roomRequest.getRole() == Role.PLAYER
-        && roomRequest.getPlayerColor() == PlayerColor.WHITE
-        && whitePlayer) {
-      throw new RuntimeException("White player already exists in the room!");
-    }
-
-    RoomParticipant participant = new RoomParticipant();
-    participant.setRoom(room);
-    participant.setUser(user);
-    participant.setGuestId(guestId);
-
-    if (roomRequest.getRole() == Role.SPECTATOR) {
-      participant.setRole(Role.SPECTATOR);
-      participant.setColor(PlayerColor.NONE);
-    } else {
-      participant.setRole(Role.PLAYER);
-      participant.setColor(roomRequest.getPlayerColor());
-    }
-
-    room.addParticipant(participant);
-
-    roomRepository.save(room);
+  @NonNull
+  private List<GetRoomResponse> getGetRoomResponses(List<Room> rooms) {
+    return rooms.stream()
+        .map(
+            item -> {
+              GetRoomResponse room = new GetRoomResponse();
+              room.setRoomId(item.getId());
+              room.setRoomStatus(item.getStatus());
+              room.setCreator(item.getRoomCreator());
+              room.setStartedAt(item.getStartedAt());
+              room.setCreatedAt(item.getCreatedAt());
+              return room;
+            })
+        .toList();
   }
 }
