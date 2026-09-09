@@ -3,6 +3,7 @@ package org.princeworks.chessora.controller.rest;
 import lombok.RequiredArgsConstructor;
 import org.princeworks.chessora.common.CommonResponse;
 import org.princeworks.chessora.common.AppConstants;
+import org.princeworks.chessora.controller.docs.RoomApi;
 import org.princeworks.chessora.entity.user.User;
 import org.princeworks.chessora.response.multiplayer.CreateRoomResponse;
 import org.princeworks.chessora.response.multiplayer.GetRoomResponse;
@@ -16,10 +17,11 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/room")
-public class RoomController {
+public class RoomController implements RoomApi {
   private final AuthUtil authUtil;
   private final IRoomService roomService;
 
+  @Override
   @PostMapping
   public ResponseEntity<CommonResponse<CreateRoomResponse>> createRoom() {
     User user = authUtil.loggedInUser();
@@ -27,6 +29,7 @@ public class RoomController {
     return ResponseEntity.ok(CommonResponse.success("room created successfully!", data));
   }
 
+  @Override
   @GetMapping("/me")
   public ResponseEntity<CommonResponse<List<GetRoomResponse>>> getAllRoomsCreatedByMe(
       @RequestParam(name = "pageSize", defaultValue = AppConstants.PAGE_SIZE, required = false)
@@ -36,19 +39,20 @@ public class RoomController {
       @RequestParam(name = "sortOrder", defaultValue = AppConstants.SORT_DIR, required = false)
           String sortOrder) {
     User loggedInUser = authUtil.loggedInUser();
-    List<GetRoomResponse> data = roomService.getAllRoomCreatedByMe(loggedInUser, pageNumber, pageSize, sortOrder);
+    List<GetRoomResponse> data =
+        roomService.getAllRoomCreatedByMe(loggedInUser, pageNumber, pageSize, sortOrder);
     return ResponseEntity.ok().body(CommonResponse.success("room fetched successfully!", data));
   }
-  
+
+  @Override
   @GetMapping
   public ResponseEntity<CommonResponse<List<GetRoomResponse>>> getAllRooms(
-          @RequestParam(name = "pageSize", defaultValue = AppConstants.PAGE_SIZE, required = false)
+      @RequestParam(name = "pageSize", defaultValue = AppConstants.PAGE_SIZE, required = false)
           Integer pageSize,
-          @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER, required = false)
+      @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER, required = false)
           Integer pageNumber,
-          @RequestParam(name = "sortOrder", defaultValue = AppConstants.SORT_DIR, required = false)
-          String sortOrder
-  ) {
+      @RequestParam(name = "sortOrder", defaultValue = AppConstants.SORT_DIR, required = false)
+          String sortOrder) {
     List<GetRoomResponse> data = roomService.getAllRooms(pageNumber, pageSize, sortOrder);
     return ResponseEntity.ok().body(CommonResponse.success("room fetch successfully!", data));
   }
