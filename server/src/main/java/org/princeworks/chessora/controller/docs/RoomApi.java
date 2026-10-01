@@ -10,114 +10,96 @@ import org.princeworks.chessora.response.multiplayer.CreateRoomResponse;
 import org.princeworks.chessora.response.multiplayer.GetAllRoomCreatedByMeResponse;
 import org.princeworks.chessora.response.multiplayer.GetRoomResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 
 public interface RoomApi {
 
-    @Operation(
-            summary = "Create a room",
-            description =
-                    "Creates a new multiplayer chess room for the authenticated user.")
-    @ApiResponses({
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "Room created successfully"),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "User is not authenticated"),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Unable to create room")
-    })
-    ResponseEntity<CommonResponse<CreateRoomResponse>> createRoom();
+  @Operation(
+      summary = "Create a room",
+      description = "Creates a new multiplayer chess room for the authenticated user.")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "Room created successfully"),
+    @ApiResponse(responseCode = "401", description = "User is not authenticated"),
+    @ApiResponse(responseCode = "400", description = "Unable to create room")
+  })
+  ResponseEntity<CommonResponse<CreateRoomResponse>> createRoom();
 
+  @Operation(
+      summary = "Get my rooms",
+      description =
+          "Retrieves rooms created by the currently authenticated user with pagination and sorting.")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "Rooms fetched successfully"),
+    @ApiResponse(responseCode = "400", description = "Invalid pagination or sorting parameters"),
+    @ApiResponse(responseCode = "401", description = "User is not authenticated")
+  })
+  ResponseEntity<CommonResponse<List<GetAllRoomCreatedByMeResponse>>> getAllRoomsCreatedByMe(
+      @Parameter(
+              name = "pageSize",
+              description = "Number of rooms to return per page",
+              example = "10",
+              in = ParameterIn.QUERY)
+          Integer pageSize,
+      @Parameter(
+              name = "pageNumber",
+              description = "Page number to retrieve",
+              example = "0",
+              in = ParameterIn.QUERY)
+          Integer pageNumber,
+      @Parameter(
+              name = "sortOrder",
+              description = "Sort direction",
+              example = "desc",
+              in = ParameterIn.QUERY)
+          String sortOrder,
+      @Parameter(
+              name = "sortBy",
+              description = "Field by which the rooms should be sorted",
+              example = "createdAt",
+              in = ParameterIn.QUERY)
+          String sortBy);
 
-    @Operation(
-            summary = "Get my rooms",
-            description =
-                    "Retrieves rooms created by the currently authenticated user with pagination and sorting.")
-    @ApiResponses({
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "Rooms fetched successfully"),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid pagination or sorting parameters"),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "User is not authenticated")
-    })
-    ResponseEntity<CommonResponse<List<GetAllRoomCreatedByMeResponse>>> getAllRoomsCreatedByMe(
-
-            @Parameter(
-                    name = "pageSize",
-                    description = "Number of rooms to return per page",
-                    example = "10",
-                    in = ParameterIn.QUERY)
-            Integer pageSize,
-
-            @Parameter(
-                    name = "pageNumber",
-                    description = "Page number to retrieve",
-                    example = "0",
-                    in = ParameterIn.QUERY)
-            Integer pageNumber,
-
-            @Parameter(
-                    name = "sortOrder",
-                    description = "Sort direction",
-                    example = "desc",
-                    in = ParameterIn.QUERY)
-            String sortOrder,
-
-            @Parameter(
-                    name = "sortBy",
-                    description = "Field by which the rooms should be sorted",
-                    example = "createdAt",
-                    in = ParameterIn.QUERY)
-            String sortBy);
-
-
-    @Operation(
-            summary = "Get all rooms",
-            description =
-                    "Retrieves all available multiplayer chess rooms with pagination and sorting.")
-    @ApiResponses({
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "Rooms fetched successfully"),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid pagination or sorting parameters")
-    })
-    ResponseEntity<CommonResponse<List<GetRoomResponse>>> getAllRooms(
-
-            @Parameter(
-                    name = "pageSize",
-                    description = "Number of rooms to return per page",
-                    example = "10",
-                    in = ParameterIn.QUERY)
-            Integer pageSize,
-
-            @Parameter(
-                    name = "pageNumber",
-                    description = "Page number to retrieve",
-                    example = "0",
-                    in = ParameterIn.QUERY)
-            Integer pageNumber,
-
-            @Parameter(
-                    name = "sortOrder",
-                    description = "Sort direction",
-                    example = "desc",
-                    in = ParameterIn.QUERY)
-            String sortOrder,
-
-            @Parameter(
-                    name = "sortBy",
-                    description = "Field by which the rooms should be sorted",
-                    example = "createdAt",
-                    in = ParameterIn.QUERY)
-            String sortBy);
+  @Operation(
+      summary = "Get all rooms",
+      description = "Retrieves all available multiplayer chess rooms with pagination and sorting.")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "Rooms fetched successfully"),
+    @ApiResponse(responseCode = "400", description = "Invalid pagination or sorting parameters")
+  })
+  ResponseEntity<CommonResponse<List<GetRoomResponse>>> getAllRooms(
+      @Parameter(
+              name = "pageSize",
+              description = "Number of rooms to return per page",
+              example = "10",
+              in = ParameterIn.QUERY)
+          Integer pageSize,
+      @Parameter(
+              name = "pageNumber",
+              description = "Page number to retrieve",
+              example = "0",
+              in = ParameterIn.QUERY)
+          Integer pageNumber,
+      @Parameter(
+              name = "sortOrder",
+              description = "Sort direction",
+              example = "desc",
+              in = ParameterIn.QUERY)
+          String sortOrder,
+      @Parameter(
+              name = "sortBy",
+              description = "Field by which the rooms should be sorted",
+              example = "createdAt",
+              in = ParameterIn.QUERY)
+          String sortBy);
+    
+  @Operation(
+      summary = "Get room by ID",
+      description = "Retrieves a specific multiplayer chess room by its unique identifier.")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "Room fetched successfully"),
+    @ApiResponse(responseCode = "404", description = "Room not found")
+  })
+  ResponseEntity<CommonResponse<GetRoomResponse>> getRoomById(@PathVariable Long id);
 }

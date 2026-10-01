@@ -54,6 +54,8 @@ public class SecurityConfig {
     http.authorizeHttpRequests(
         req -> {
           req.requestMatchers(
+                  "/ws",
+                  "/ws/**",
                   "/v3/api-docs/**",
                   "/swagger-ui/**",
                   "/h2-console/**",

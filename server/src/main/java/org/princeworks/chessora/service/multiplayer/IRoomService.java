@@ -9,11 +9,10 @@ import org.princeworks.chessora.response.multiplayer.CreateRoomResponse;
 import java.util.List;
 
 public interface IRoomService {
+  GetRoomResponse getRoomById(Long id);
   CreateRoomResponse createRoom(User user);
-
   PageResponse<List<GetAllRoomCreatedByMeResponse>> getAllRoomCreatedByMe(
       User loggedInUser, Integer pageNumber, Integer pageSize, String sortOrder, String sortBy);
-
   PageResponse<List<GetRoomResponse>> getAllRooms(
       Integer pageNumber, Integer pageSize, String sortOrder, String sortBy);
 }

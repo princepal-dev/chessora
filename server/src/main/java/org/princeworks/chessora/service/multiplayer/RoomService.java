@@ -27,6 +27,19 @@ public class RoomService implements IRoomService {
   private final RoomRepository roomRepository;
 
   @Override
+  public GetRoomResponse getRoomById(Long id) {
+    Room room =
+        roomRepository.findById(id).orElseThrow(() -> new RuntimeException("Room not found"));
+    GetRoomResponse response = new GetRoomResponse();
+    response.setRoomId(room.getId());
+    response.setRoomStatus(room.getStatus());
+    response.setCreator(room.getRoomCreator());
+    response.setStartedAt(room.getStartedAt());
+    response.setCreatedAt(room.getCreatedAt());
+    return response;
+  }
+
+  @Override
   public CreateRoomResponse createRoom(User user) {
     int roomCode = roomUtil.generateRoomCode();
     Room room = new Room();

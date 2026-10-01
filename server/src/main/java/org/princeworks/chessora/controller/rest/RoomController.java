@@ -67,4 +67,11 @@ public class RoomController implements RoomApi {
     PageResponse<List<GetRoomResponse>> result = roomService.getAllRooms(pageNumber, pageSize, sortOrder, sortBy);
     return ResponseEntity.ok().body(CommonResponse.success("room fetch successfully!", result.getData(), result.getPagination()));
   }
+  
+  @Override
+  @GetMapping("/{id}")
+  public ResponseEntity<CommonResponse<GetRoomResponse>> getRoomById(@PathVariable Long id) {
+    GetRoomResponse data = roomService.getRoomById(id);
+    return ResponseEntity.ok(CommonResponse.success("room fetched successfully!", data));
+  }
 }
