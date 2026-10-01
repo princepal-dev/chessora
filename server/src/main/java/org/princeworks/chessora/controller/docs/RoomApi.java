@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.princeworks.chessora.common.CommonResponse;
 import org.princeworks.chessora.response.multiplayer.CreateRoomResponse;
+import org.princeworks.chessora.response.multiplayer.GetAllRoomCreatedByMeResponse;
 import org.princeworks.chessora.response.multiplayer.GetRoomResponse;
 import org.springframework.http.ResponseEntity;
 
@@ -47,7 +48,7 @@ public interface RoomApi {
                     responseCode = "401",
                     description = "User is not authenticated")
     })
-    ResponseEntity<CommonResponse<List<GetRoomResponse>>> getAllRoomsCreatedByMe(
+    ResponseEntity<CommonResponse<List<GetAllRoomCreatedByMeResponse>>> getAllRoomsCreatedByMe(
 
             @Parameter(
                     name = "pageSize",

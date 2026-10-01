@@ -3,9 +3,11 @@ package org.princeworks.chessora.controller.rest;
 import lombok.RequiredArgsConstructor;
 import org.princeworks.chessora.common.CommonResponse;
 import org.princeworks.chessora.common.AppConstants;
+import org.princeworks.chessora.common.PageResponse;
 import org.princeworks.chessora.controller.docs.RoomApi;
 import org.princeworks.chessora.entity.user.User;
 import org.princeworks.chessora.response.multiplayer.CreateRoomResponse;
+import org.princeworks.chessora.response.multiplayer.GetAllRoomCreatedByMeResponse;
 import org.princeworks.chessora.response.multiplayer.GetRoomResponse;
 import org.princeworks.chessora.service.multiplayer.IRoomService;
 import org.princeworks.chessora.utils.AuthUtil;
@@ -31,7 +33,7 @@ public class RoomController implements RoomApi {
 
   @Override
   @GetMapping("/me")
-  public ResponseEntity<CommonResponse<List<GetRoomResponse>>> getAllRoomsCreatedByMe(
+  public ResponseEntity<CommonResponse<List<GetAllRoomCreatedByMeResponse>>> getAllRoomsCreatedByMe(
       @RequestParam(name = "pageSize", defaultValue = AppConstants.PAGE_SIZE, required = false)
           Integer pageSize,
       @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER, required = false)
@@ -41,9 +43,14 @@ public class RoomController implements RoomApi {
       @RequestParam(name = "sortBy", defaultValue = AppConstants.SORT_BY, required = false)
           String sortBy) {
     User loggedInUser = authUtil.loggedInUser();
-    List<GetRoomResponse> data =
+    
+    PageResponse<List<GetAllRoomCreatedByMeResponse>> result =
         roomService.getAllRoomCreatedByMe(loggedInUser, pageNumber, pageSize, sortOrder, sortBy);
-    return ResponseEntity.ok().body(CommonResponse.success("room fetched successfully!", data));
+    
+    return ResponseEntity.ok()
+        .body(
+            CommonResponse.success(
+                "room fetched successfully!", result.getData(), result.getPagination()));
   }
 
   @Override
@@ -57,7 +64,7 @@ public class RoomController implements RoomApi {
           String sortOrder,
       @RequestParam(name = "sortBy", defaultValue = AppConstants.SORT_BY, required = false)
           String sortBy) {
-    List<GetRoomResponse> data = roomService.getAllRooms(pageNumber, pageSize, sortOrder, sortBy);
-    return ResponseEntity.ok().body(CommonResponse.success("room fetch successfully!", data));
+    PageResponse<List<GetRoomResponse>> result = roomService.getAllRooms(pageNumber, pageSize, sortOrder, sortBy);
+    return ResponseEntity.ok().body(CommonResponse.success("room fetch successfully!", result.getData(), result.getPagination()));
   }
 }

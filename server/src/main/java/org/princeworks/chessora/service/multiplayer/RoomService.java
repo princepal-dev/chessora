@@ -1,17 +1,17 @@
 package org.princeworks.chessora.service.multiplayer;
 
-import java.util.HexFormat;
 import java.util.List;
 
-import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.jspecify.annotations.NonNull;
+import org.princeworks.chessora.common.PageResponse;
+import org.princeworks.chessora.common.PaginationData;
 import org.princeworks.chessora.entity.multiplayer.Room;
 import org.princeworks.chessora.entity.multiplayer.RoomStatus;
 import org.princeworks.chessora.entity.user.User;
 import org.princeworks.chessora.repositories.RoomRepository;
 import org.princeworks.chessora.response.multiplayer.CreateRoomResponse;
+import org.princeworks.chessora.response.multiplayer.GetAllRoomCreatedByMeResponse;
 import org.princeworks.chessora.response.multiplayer.GetRoomResponse;
 import org.princeworks.chessora.utils.RoomUtil;
 import org.springframework.data.domain.Page;
@@ -41,7 +41,7 @@ public class RoomService implements IRoomService {
 
   @Override
   @Transactional
-  public List<GetRoomResponse> getAllRoomCreatedByMe(
+  public PageResponse<List<GetAllRoomCreatedByMeResponse>> getAllRoomCreatedByMe(
       User loggedInUser, Integer pageNumber, Integer pageSize, String sortOrder, String sortBy) {
     Sort sortByAndOrder =
         sortOrder.equalsIgnoreCase("asc")
@@ -55,12 +55,35 @@ public class RoomService implements IRoomService {
 
     if (roomsCreatedByUser.isEmpty()) throw new RuntimeException("No rooms created by you");
 
-    return getGetRoomResponses(roomsCreatedByUser);
+    List<GetAllRoomCreatedByMeResponse> rooms =
+        roomsCreatedByUser.stream()
+            .map(
+                item -> {
+                  GetAllRoomCreatedByMeResponse room = new GetAllRoomCreatedByMeResponse();
+                  room.setRoomId(item.getId());
+                  room.setRoomStatus(item.getStatus());
+                  room.setCreatedAt(item.getCreatedAt());
+                  room.setStartedAt(item.getStartedAt());
+                  return room;
+                })
+            .toList();
+
+    PaginationData pagination =
+        new PaginationData(
+            roomPage.getNumber(),
+            roomPage.getSize(),
+            roomPage.getTotalElements(),
+            roomPage.getTotalPages(),
+            roomPage.hasNext(),
+            roomPage.hasPrevious(),
+            roomPage.isLast());
+
+    return new PageResponse<>(rooms, pagination);
   }
 
   @Override
   @Transactional
-  public List<GetRoomResponse> getAllRooms(
+  public PageResponse<List<GetRoomResponse>> getAllRooms(
       Integer pageNumber, Integer pageSize, String sortOrder, String sortBy) {
     Sort sortByAndOrder =
         sortOrder.equalsIgnoreCase("asc")
@@ -68,27 +91,35 @@ public class RoomService implements IRoomService {
             : Sort.by(sortBy).descending();
 
     Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sortByAndOrder);
-    Page<Room> allRoomsPage = roomRepository.findAll(pageDetails);
+    Page<Room> roomPage = roomRepository.findAll(pageDetails);
 
-    List<Room> allRooms = allRoomsPage.getContent();
+    List<Room> allRooms = roomPage.getContent();
     if (allRooms.isEmpty()) throw new RuntimeException("No active rooms available");
 
-    return getGetRoomResponses(allRooms);
-  }
-  
-  @NonNull
-  private List<GetRoomResponse> getGetRoomResponses(List<Room> rooms) {
-    return rooms.stream()
-        .map(
-            item -> {
-              GetRoomResponse room = new GetRoomResponse();
-              room.setRoomId(item.getId());
-              room.setRoomStatus(item.getStatus());
-              room.setCreator(item.getRoomCreator());
-              room.setStartedAt(item.getStartedAt());
-              room.setCreatedAt(item.getCreatedAt());
-              return room;
-            })
-        .toList();
+    List<GetRoomResponse> rooms =
+        allRooms.stream()
+            .map(
+                item -> {
+                  GetRoomResponse room = new GetRoomResponse();
+                  room.setRoomId(item.getId());
+                  room.setRoomStatus(item.getStatus());
+                  room.setCreator(item.getRoomCreator());
+                  room.setStartedAt(item.getStartedAt());
+                  room.setCreatedAt(item.getCreatedAt());
+                  return room;
+                })
+            .toList();
+
+    PaginationData pagination =
+        new PaginationData(
+            roomPage.getNumber(),
+            roomPage.getSize(),
+            roomPage.getTotalElements(),
+            roomPage.getTotalPages(),
+            roomPage.hasNext(),
+            roomPage.hasPrevious(),
+            roomPage.isLast());
+
+    return new PageResponse<>(rooms, pagination);
   }
 }

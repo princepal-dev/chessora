@@ -1,11 +1,13 @@
 package org.princeworks.chessora.common;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 
 @Data
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class CommonResponse<T> {
   public boolean status;
   public String message;
