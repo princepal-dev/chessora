@@ -28,11 +28,11 @@ public class Room {
   @Column(nullable = false)
   private RoomStatus status;
 
-  @OneToOne(fetch = FetchType.LAZY)
+  @OneToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "game_id")
   private Game game;
   
-  @ManyToOne (fetch = FetchType.LAZY)
+  @ManyToOne (fetch = FetchType.EAGER)
   @JoinColumn (name = "user_id", nullable = false)
   private User roomCreator;
 

@@ -37,10 +37,12 @@ public class RoomController implements RoomApi {
       @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER, required = false)
           Integer pageNumber,
       @RequestParam(name = "sortOrder", defaultValue = AppConstants.SORT_DIR, required = false)
-          String sortOrder) {
+          String sortOrder,
+      @RequestParam(name = "sortBy", defaultValue = AppConstants.SORT_BY, required = false)
+          String sortBy) {
     User loggedInUser = authUtil.loggedInUser();
     List<GetRoomResponse> data =
-        roomService.getAllRoomCreatedByMe(loggedInUser, pageNumber, pageSize, sortOrder);
+        roomService.getAllRoomCreatedByMe(loggedInUser, pageNumber, pageSize, sortOrder, sortBy);
     return ResponseEntity.ok().body(CommonResponse.success("room fetched successfully!", data));
   }
 
@@ -52,8 +54,10 @@ public class RoomController implements RoomApi {
       @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER, required = false)
           Integer pageNumber,
       @RequestParam(name = "sortOrder", defaultValue = AppConstants.SORT_DIR, required = false)
-          String sortOrder) {
-    List<GetRoomResponse> data = roomService.getAllRooms(pageNumber, pageSize, sortOrder);
+          String sortOrder,
+      @RequestParam(name = "sortBy", defaultValue = AppConstants.SORT_BY, required = false)
+          String sortBy) {
+    List<GetRoomResponse> data = roomService.getAllRooms(pageNumber, pageSize, sortOrder, sortBy);
     return ResponseEntity.ok().body(CommonResponse.success("room fetch successfully!", data));
   }
 }

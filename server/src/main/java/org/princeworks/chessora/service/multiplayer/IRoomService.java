@@ -10,7 +10,8 @@ public interface IRoomService {
   CreateRoomResponse createRoom(User user);
 
   List<GetRoomResponse> getAllRoomCreatedByMe(
-      User loggedInUser, Integer pageNumber, Integer pageSize, String sortOrder);
+      User loggedInUser, Integer pageNumber, Integer pageSize, String sortOrder, String sortBy);
 
-  List<GetRoomResponse> getAllRooms(Integer pageNumber, Integer pageSize, String sortOrder);
+  List<GetRoomResponse> getAllRooms(
+      Integer pageNumber, Integer pageSize, String sortOrder, String sortBy);
 }

@@ -1,6 +1,10 @@
 package org.princeworks.chessora.service.multiplayer;
 
+import java.util.HexFormat;
 import java.util.List;
+
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.princeworks.chessora.entity.multiplayer.Room;
@@ -36,12 +40,13 @@ public class RoomService implements IRoomService {
   }
 
   @Override
+  @Transactional
   public List<GetRoomResponse> getAllRoomCreatedByMe(
-      User loggedInUser, Integer pageNumber, Integer pageSize, String sortOrder) {
+      User loggedInUser, Integer pageNumber, Integer pageSize, String sortOrder, String sortBy) {
     Sort sortByAndOrder =
         sortOrder.equalsIgnoreCase("asc")
-            ? Sort.by(sortOrder).ascending()
-            : Sort.by(sortOrder).descending();
+            ? Sort.by(sortBy).ascending()
+            : Sort.by(sortBy).descending();
 
     Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sortByAndOrder);
     Page<Room> roomPage = roomRepository.findByRoomCreator(pageDetails, loggedInUser);
@@ -54,22 +59,23 @@ public class RoomService implements IRoomService {
   }
 
   @Override
-  public List<GetRoomResponse> getAllRooms(Integer pageNumber, Integer pageSize, String sortOrder) {
+  @Transactional
+  public List<GetRoomResponse> getAllRooms(
+      Integer pageNumber, Integer pageSize, String sortOrder, String sortBy) {
     Sort sortByAndOrder =
         sortOrder.equalsIgnoreCase("asc")
-            ? Sort.by(sortOrder).ascending()
-            : Sort.by(sortOrder).descending();
+            ? Sort.by(sortBy).ascending()
+            : Sort.by(sortBy).descending();
 
     Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sortByAndOrder);
     Page<Room> allRoomsPage = roomRepository.findAll(pageDetails);
 
     List<Room> allRooms = allRoomsPage.getContent();
-
     if (allRooms.isEmpty()) throw new RuntimeException("No active rooms available");
 
     return getGetRoomResponses(allRooms);
   }
-
+  
   @NonNull
   private List<GetRoomResponse> getGetRoomResponses(List<Room> rooms) {
     return rooms.stream()

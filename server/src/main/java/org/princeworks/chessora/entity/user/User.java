@@ -1,22 +1,24 @@
 package org.princeworks.chessora.entity.user;
 
+import lombok.Data;
 import jakarta.persistence.*;
+import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.CreationTimestamp;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.time.LocalDateTime;
 
 @Data
 @Entity
 @NoArgsConstructor
-@Table (name = "users")
+@Table(name = "users")
 public class User {
   @Id
+  @JsonIgnore
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
@@ -31,12 +33,13 @@ public class User {
   @Size(min = 3, max = 30, message = "Username should be in range of 3 to 30")
   private String userName;
 
-  @NotBlank private String password;
+  @JsonIgnore @NotBlank private String password;
 
+  @JsonIgnore
   @Enumerated(EnumType.STRING)
   private SignInMethod method;
 
-  private Boolean emailVerified = false;
+  @JsonIgnore private Boolean emailVerified = false;
 
   public User(
       String email, String fullName, String userName, String password, SignInMethod method) {
@@ -47,7 +50,7 @@ public class User {
     this.method = method;
   }
 
-  @CreationTimestamp private LocalDateTime createdAt;
+  @JsonIgnore @CreationTimestamp private LocalDateTime createdAt;
 
-  @UpdateTimestamp private LocalDateTime updatedAt;
+  @JsonIgnore @UpdateTimestamp private LocalDateTime updatedAt;
 }
