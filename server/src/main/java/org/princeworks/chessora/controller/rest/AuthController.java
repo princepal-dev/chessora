@@ -3,6 +3,8 @@ package org.princeworks.chessora.controller.rest;
 import jakarta.transaction.Transactional;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.princeworks.chessora.common.CommonResponse;
 import org.princeworks.chessora.controller.docs.AuthApi;
@@ -20,6 +22,7 @@ import org.princeworks.chessora.response.user.SignInResponse;
 import org.princeworks.chessora.security.jwt.JwtUtils;
 import org.princeworks.chessora.security.service.UserDetailsImpl;
 import org.princeworks.chessora.service.email.EmailService;
+import org.princeworks.chessora.utils.PasswordUtil;
 import org.princeworks.chessora.utils.TokenUtil;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -30,7 +33,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -40,15 +42,15 @@ public class AuthController implements AuthApi {
   private final JwtUtils jwtUtils;
   private final TokenUtil tokenUtil;
   private final EmailService emailService;
+  private final PasswordUtil passwordUtil;
   private final UserRepository userRepository;
-  private final PasswordEncoder passwordEncoder;
   private final TokenRepository tokenRepository;
   private final AuthenticationManager authenticationManager;
-  
+
   @Override
   @PostMapping("/signin")
   public ResponseEntity<CommonResponse<SignInResponse>> authenticateUser(
-      @RequestBody SignInRequest signInRequest) {
+      @Valid @RequestBody SignInRequest signInRequest) {
     Authentication authentication;
 
     try {
@@ -85,14 +87,22 @@ public class AuthController implements AuthApi {
   @Override
   @PostMapping("/signup")
   public ResponseEntity<CommonResponse<Void>> registerUser(
-          @RequestBody SignUpRequest signUpRequest) {
+      @Valid @RequestBody SignUpRequest signUpRequest) {
     if (userRepository.existsByEmail(signUpRequest.getEmail())
         || userRepository.existsByUserName(signUpRequest.getUsername()))
       return ResponseEntity.badRequest()
           .body(CommonResponse.error("Email or username is already registered"));
 
-    String hashedPassword = passwordEncoder.encode(signUpRequest.getPassword());
     String fullName = signUpRequest.getFirstName();
+
+    if (passwordUtil.isPasswordSecure(signUpRequest.getPassword())) {
+      return ResponseEntity.badRequest()
+          .body(
+              CommonResponse.error(
+                  "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one digit, and one special character"));
+    }
+
+    String hashedPassword = passwordUtil.hashPassword(signUpRequest.getPassword());
 
     if (signUpRequest.getLastName() != null && !signUpRequest.getLastName().isBlank()) {
       fullName += " " + signUpRequest.getLastName();
@@ -159,7 +169,7 @@ public class AuthController implements AuthApi {
   @Override
   @PostMapping("/forgot-password")
   public ResponseEntity<CommonResponse<Void>> forgotPassword(
-          @RequestBody ForgotPasswordRequest passwordResetRequest) {
+      @Valid @RequestBody ForgotPasswordRequest passwordResetRequest) {
     if (!userRepository.existsByEmail(passwordResetRequest.getEmail()))
       return ResponseEntity.badRequest()
           .body(CommonResponse.error("Email not registered with chessora!"));
@@ -194,7 +204,7 @@ public class AuthController implements AuthApi {
   @Transactional
   @PostMapping("/password-reset/{token}")
   public ResponseEntity<CommonResponse<Void>> resetPassword(
-          @PathVariable String token, @RequestBody PasswordResetRequest passwordResetRequest) {
+      @Valid @PathVariable String token, @RequestBody PasswordResetRequest passwordResetRequest) {
     if (token == null || token.isBlank())
       return ResponseEntity.badRequest()
           .body(CommonResponse.error("Password reset token is null or empty!"));
@@ -217,7 +227,11 @@ public class AuthController implements AuthApi {
           .body(CommonResponse.error("Verification token is expired"));
 
     User user = savedToken.getUser();
-    String hashedPassword = passwordEncoder.encode(passwordResetRequest.getPassword());
+
+    if (passwordUtil.isPasswordSecure(passwordResetRequest.getPassword()))
+      return ResponseEntity.badRequest().body(CommonResponse.error("Password is not secure"));
+
+    String hashedPassword = passwordUtil.hashPassword(passwordResetRequest.getPassword());
     user.setPassword(hashedPassword);
 
     savedToken.setUsed(true);

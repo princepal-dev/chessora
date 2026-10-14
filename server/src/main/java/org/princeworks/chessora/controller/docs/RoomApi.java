@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import java.util.List;
 
 public interface RoomApi {
-
   @Operation(
       summary = "Create a room",
       description = "Creates a new multiplayer chess room for the authenticated user.")
@@ -93,7 +92,7 @@ public interface RoomApi {
               example = "createdAt",
               in = ParameterIn.QUERY)
           String sortBy);
-    
+
   @Operation(
       summary = "Get room by ID",
       description = "Retrieves a specific multiplayer chess room by its unique identifier.")
